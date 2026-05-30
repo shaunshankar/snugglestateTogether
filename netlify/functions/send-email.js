@@ -89,5 +89,3 @@ export default async (req) => {
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 })
 }
-
-export const config = { path: '/api/send-email' }
