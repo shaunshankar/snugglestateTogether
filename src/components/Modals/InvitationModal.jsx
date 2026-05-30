@@ -40,10 +40,10 @@ export default function InvitationModal({ booking, userEmail, onClose, onSaved, 
   const sendEmail = async () => {
     setSending(true)
     try {
-      const res = await fetch('/.netlify/functions/send-email', {
+      const res = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: partnerEmail, booking, invitationText: text }),
+        body: JSON.stringify({ booking, invitationText: text }),
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Send failed')
       showToast('Invitation sent! 💌', 'success')
@@ -114,7 +114,7 @@ export default function InvitationModal({ booking, userEmail, onClose, onSaved, 
                 <button onClick={sendEmail} disabled={sending}
                         className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
                         style={{ background:'linear-gradient(135deg,#7c3aed,#a855f7)' }}>
-                  {sending ? 'Sending…' : '💌 Send Invitation'}
+                  {sending ? 'Sending…' : '💌 Send Invitation to Arpana'}
                 </button>
               </div>
             </div>

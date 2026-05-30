@@ -1,26 +1,34 @@
-export default async (req) => {
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
-  }
+import nodemailer from 'nodemailer'
 
-  const { to, booking, invitationText } = await req.json()
+const RECIPIENT = 'arpanadevi125@gmail.com'
 
-  const ALLOWED = ['shaunshankar1@gmail.com', 'arpanadevi125@gmail.com']
-  if (!ALLOWED.includes(to)) {
-    return new Response(JSON.stringify({ error: 'Unauthorised recipient' }), { status: 403 })
-  }
+function formatTime(t) {
+  if (!t) return ''
+  const [h, min] = t.split(':')
+  const hh = +h
+  const ampm = hh >= 12 ? 'pm' : 'am'
+  const h12 = hh % 12 || 12
+  return `${h12}:${min}${ampm}`
+}
 
-  const formatTime = t => {
-    if (!t) return ''
-    const [h, min] = t.split(':')
-    const hh = +h; const ampm = hh >= 12 ? 'pm' : 'am'
-    const h12 = hh % 12 || 12
-    return `${h12}:${min}${ampm}`
-  }
-
-  const dateStr = new Date(booking.date + 'T12:00').toLocaleDateString('en-AU', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+function displayDate(str) {
+  const [y, m, d] = str.split('-')
+  return new Date(+y, +m - 1, +d).toLocaleDateString('en-AU', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   })
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  const { booking, invitationText } = req.body
+  if (!booking || !invitationText) {
+    return res.status(400).json({ error: 'Missing booking or invitationText' })
+  }
+
+  const dateStr = displayDate(booking.date)
 
   const html = `
 <!DOCTYPE html>
@@ -68,24 +76,23 @@ export default async (req) => {
 </body>
 </html>`
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
     },
-    body: JSON.stringify({
-      from: 'Snuggle State <onboarding@resend.dev>',
-      to: [to],
-      subject: `💜 A special invitation for you: ${booking.event_name}`,
-      html,
-    }),
   })
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    return new Response(JSON.stringify({ error: err.message || 'Resend error' }), { status: 500 })
+  try {
+    await transporter.sendMail({
+      from: `Snuggle State <${process.env.GMAIL_USER}>`,
+      to: RECIPIENT,
+      subject: `💜 A special invitation for you: ${booking.event_name} · ${dateStr}`,
+      html,
+    })
+    return res.status(200).json({ ok: true })
+  } catch (e) {
+    return res.status(500).json({ error: e.message })
   }
-
-  return new Response(JSON.stringify({ ok: true }), { status: 200 })
 }
